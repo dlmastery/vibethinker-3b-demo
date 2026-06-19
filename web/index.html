@@ -117,8 +117,8 @@
   .answer .ico{width:46px;height:46px;border-radius:12px;background:var(--grad);
     display:grid;place-items:center;font-size:24px;flex-shrink:0}
 
-  /* CLR candidate grid */
-  .cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  /* CLR candidate list — one sample per row for readability */
+  .cands{display:flex;flex-direction:column;gap:12px}
   .cand{background:var(--bg2);border:1px solid var(--line);border-radius:12px;overflow:hidden;
     display:flex;flex-direction:column}
   .cand-h{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;cursor:pointer;user-select:none}
@@ -187,7 +187,7 @@
   @keyframes bl{0%{opacity:1}50%{opacity:0}}
 </style>
 </head>
-<body class="single">
+<body class="clr">
 <header>
   <div class="logo">V</div>
   <div class="brand">
@@ -204,25 +204,27 @@
   <section class="panel">
     <label class="fld">Reasoning mode</label>
     <div class="seg" id="seg">
-      <button data-mode="single" class="active">Single Pass<span class="sub">non-CLR · one solution</span></button>
-      <button data-mode="clr">CLR<span class="sub">claim-level reliability</span></button>
+      <button data-mode="single">Single Pass<span class="sub">non-CLR · one solution</span></button>
+      <button data-mode="clr" class="active">CLR<span class="sub">claim-level reliability</span></button>
     </div>
 
-    <label class="fld">Problem</label>
-    <textarea id="prompt" placeholder="e.g. Find the number of ordered pairs (a,b) of positive integers with a+b ≤ 100 such that a·b is a perfect square."></textarea>
+    <label class="fld">Problem <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— editable; defaults to a hard LeetCode problem</span></label>
+    <textarea id="prompt" placeholder="Pose a verifiable math / coding / STEM problem…">LeetCode Hard — Count Special Integers (digit DP): a positive integer is "special" if all of its digits are distinct. Given a positive integer n, return how many integers in [1, n] are special.
 
-    <div class="row"><label class="fld" style="margin:18px 0 0">Temperature</label><span class="val" id="tVal">0.6</span></div>
-    <input type="range" id="temp" min="0" max="1.2" step="0.1" value="0.6" />
+Write an optimal digit-DP Python solution with a clear explanation, then evaluate it for n = 2026 and put the final count in \boxed{}.</textarea>
+
+    <div class="row"><label class="fld" style="margin:18px 0 0">Temperature</label><span class="val" id="tVal">1.0</span></div>
+    <input type="range" id="temp" min="0" max="1.2" step="0.1" value="1.0" />
     <div class="hint">README recommends 0.6 or 1.0. CLR bumps sampling to ≥1.0 for diversity.</div>
 
-    <div class="row"><label class="fld" style="margin:18px 0 0">Max new tokens</label><span class="val" id="mVal">8192</span></div>
-    <input type="range" id="maxtok" min="1024" max="40960" step="1024" value="8192" />
-    <div class="hint">Reasoning traces are long. Lower = faster on a laptop GPU.</div>
+    <div class="row"><label class="fld" style="margin:18px 0 0">Max new tokens</label><span class="val" id="mVal">16384</span></div>
+    <input type="range" id="maxtok" min="1024" max="40960" step="1024" value="16384" />
+    <div class="hint">Defaulted high for this hard problem — hard reasoning traces are long. Lower = faster on a laptop GPU.</div>
 
     <div class="clr-only">
       <div class="row"><label class="fld" style="margin:18px 0 0">CLR samples (N)</label><span class="val" id="nVal">4</span></div>
       <input type="range" id="nsamp" min="2" max="8" step="1" value="4" />
-      <div class="hint">N independent solutions → majority vote → claim verification.</div>
+      <div class="hint">N independent solutions → majority vote → claim verification. Hard problem → 4 samples take a few minutes on a laptop GPU.</div>
     </div>
 
     <button class="run" id="runBtn">Run reasoning</button>
@@ -244,7 +246,7 @@
 
 <script>
 const $ = s => document.querySelector(s);
-let mode = "single", running = false, abort = null;
+let mode = "clr", running = false, abort = null;
 
 const NOTES = {
   single: "Single Pass: one generation with the model's recommended sampling. The final \\boxed{} answer is extracted automatically.",
@@ -262,7 +264,7 @@ $("#seg").addEventListener("click", e=>{
 $("#temp").addEventListener("input",e=>$("#tVal").textContent=(+e.target.value).toFixed(1));
 $("#maxtok").addEventListener("input",e=>$("#mVal").textContent=e.target.value);
 $("#nsamp").addEventListener("input",e=>$("#nVal").textContent=e.target.value);
-$("#modeNote").textContent = NOTES.single;
+$("#modeNote").textContent = NOTES.clr;
 
 // ---- status polling ----
 async function refreshStatus(){

@@ -101,6 +101,12 @@ python app.py
 
 The model loads lazily on the first request; the header shows GPU + load status.
 
+**Defaults are tuned for a hard problem:** the app opens in **CLR** mode with a hard
+LeetCode problem (digit‑DP "Count Special Integers") pre‑filled in the editable text box,
+temperature **1.0**, **16384** max tokens, and **N = 4** samples. Just hit **Run** — or
+replace the prompt with your own. (On a laptop GPU a 4‑sample CLR run on a hard problem
+takes a few minutes; lower `N` / max tokens for faster runs.)
+
 ---
 
 ## Try these (verifiable‑reasoning) prompts
