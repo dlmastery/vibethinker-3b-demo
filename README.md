@@ -22,9 +22,13 @@ A beautiful local web app for running **[VibeThinker-3B](https://github.com/Weib
 
 ![Single pass](docs/02-single-pass.png)
 
-**CLR — N samples → self‑consistency vote → claim‑level verification → reliability gauge**
+**CLR — N samples (one per row, each reasoning collapsible) → self‑consistency vote → claim‑level verification → reliability gauge**
 
 ![CLR](docs/03-clr.png)
+
+**Predefined problems + retrieval — a knowledge task augmented with Wikipedia context before reasoning**
+
+![Retrieval](docs/04-retrieval.png)
 
 ---
 
@@ -109,6 +113,16 @@ takes a few minutes; lower `N` / max tokens for faster runs.)
 
 ---
 
+## Predefined problems & context retrieval
+
+- **Example dropdown** — pick a ready‑made problem across fields (LeetCode Hard,
+  competition math, number theory, geometry, physics, and *knowledge* tasks). Each
+  one fills the editable prompt and sets a sensible mode + reasoning config.
+- **"Bring in relevant context"** — an optional retrieval step that searches
+  **Wikipedia**, shows the sources it found, and prepends them to the prompt before
+  the model reasons. It's auto‑enabled for knowledge tasks, since a small reasoning
+  model like VibeThinker is weak on open‑domain facts. Endpoint: `POST /api/context`.
+
 ## Try these (verifiable‑reasoning) prompts
 
 VibeThinker‑3B shines on **competition math** and **coding**. Some hard examples to try:
@@ -134,7 +148,7 @@ VibeThinker‑3B shines on **competition math** and **coding**. Some hard exampl
 
 ```
 .
-├─ app.py            # FastAPI: SSE streaming, /api/generate (+_clr), /api/stop, serves the UI
+├─ app.py            # FastAPI: SSE streaming, /api/generate (+_clr), /api/context, /api/stop
 ├─ engine.py         # Model loading + non-CLR stream + CLR reconstruction
 ├─ web/index.html    # Single-page UI: KaTeX + marked + highlight.js, live streaming, CLR viz
 ├─ docs/             # Screenshots

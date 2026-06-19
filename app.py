@@ -25,6 +25,7 @@ if _ca.exists():
     os.environ.setdefault("SSL_CERT_FILE", str(_ca))
     os.environ.setdefault("REQUESTS_CA_BUNDLE", str(_ca))
 
+import requests
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
@@ -71,6 +72,73 @@ def stop():
         if _CUR["stop"] is not None:
             _CUR["stop"].set()
     return {"stopped": True}
+
+
+# --------------------------------------------------------------------------- #
+# Retrieval: bring in relevant context (Wikipedia) before reasoning.
+# VibeThinker is a small reasoning model and is weak on open-domain knowledge,
+# so for knowledge-style tasks we prepend retrieved facts to the prompt.
+# --------------------------------------------------------------------------- #
+WIKI_API = "https://en.wikipedia.org/w/api.php"
+
+
+def _search_query(prompt: str) -> str:
+    """Derive a concise Wikipedia search query from a verbose prompt."""
+    import re
+    q = prompt.strip()
+    # drop boilerplate instructions that hurt search ranking
+    q = re.sub(r"\\boxed\{\}|put the .*", "", q, flags=re.I)
+    # use the first question / sentence only
+    q = re.split(r"[?\n]", q)[0]
+    q = re.sub(r"^(using|given|with|compute|calculate|find|what is|how many)\b[\s,]*",
+               "", q.strip(), flags=re.I)
+    return q.strip()[:200] or prompt.strip()[:200]
+
+
+def wiki_context(query: str, k: int = 5, max_chars: int = 1100) -> list[dict]:
+    s = requests.Session()
+    s.headers["User-Agent"] = "VibeThinkerStudio/1.0 (local demo)"
+    q = _search_query(query)
+    hits = s.get(WIKI_API, params={
+        "action": "query", "list": "search", "srsearch": q,
+        "format": "json", "srlimit": k,
+    }, timeout=20).json().get("query", {}).get("search", [])
+    titles = [h["title"] for h in hits]
+    if not titles:
+        return []
+    pages = s.get(WIKI_API, params={
+        "action": "query", "prop": "extracts|info", "inprop": "url",
+        "exintro": 1, "explaintext": 1, "redirects": 1,
+        "titles": "|".join(titles), "format": "json",
+    }, timeout=20).json().get("query", {}).get("pages", {})
+    by_title = {p.get("title"): p for p in pages.values()}
+    out = []
+    for t in titles:
+        p = by_title.get(t)
+        extract = (p or {}).get("extract", "").strip()
+        if not extract:
+            continue
+        out.append({
+            "title": t,
+            "extract": extract[:max_chars],
+            "url": (p or {}).get("fullurl",
+                                 f"https://en.wikipedia.org/wiki/{t.replace(' ', '_')}"),
+        })
+    return out
+
+
+class CtxRequest(BaseModel):
+    prompt: str
+
+
+@app.post("/api/context")
+def context(req: CtxRequest):
+    try:
+        results = wiki_context(req.prompt)
+    except Exception as e:
+        return {"results": [], "context": "", "error": repr(e)}
+    ctx = "\n\n".join(f"[{r['title']}]\n{r['extract']}" for r in results)
+    return {"results": results, "context": ctx}
 
 
 @app.get("/api/status")

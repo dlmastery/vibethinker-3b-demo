@@ -67,6 +67,25 @@
     padding:14px;font-size:14px;line-height:1.55;font-family:inherit}
   textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.18)}
 
+  .sel{width:100%;background:var(--bg2);border:1px solid var(--line2);border-radius:12px;
+    color:var(--txt);padding:12px 13px;font-size:13.5px;font-family:inherit;cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238c92a6' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 13px center}
+  .sel:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.18)}
+  .sel optgroup{background:var(--panel);color:var(--accent2);font-style:normal}
+  .sel option{background:var(--panel);color:var(--txt)}
+  label.chk{display:flex;align-items:flex-start;gap:9px;margin-top:14px;font-size:13px;
+    color:var(--txt);cursor:pointer;line-height:1.45}
+  label.chk input{margin-top:2px;accent-color:var(--accent);width:16px;height:16px;cursor:pointer;flex-shrink:0}
+  .chkhint{color:var(--faint);font-size:11.5px}
+  /* retrieved context */
+  .src{padding:10px 0;border-bottom:1px solid var(--line)}
+  .src:last-child{border-bottom:0}
+  .src a{color:var(--accent2);font-weight:600;font-size:13px;text-decoration:none}
+  .src a:hover{text-decoration:underline}
+  .srcx{color:var(--muted);font-size:12px;line-height:1.55;margin-top:4px}
+
   /* segmented mode toggle */
   .seg{display:flex;background:var(--bg2);border:1px solid var(--line2);
     border-radius:12px;padding:4px;gap:4px}
@@ -208,10 +227,41 @@
       <button data-mode="clr" class="active">CLR<span class="sub">claim-level reliability</span></button>
     </div>
 
-    <label class="fld">Problem <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— editable; defaults to a hard LeetCode problem</span></label>
+    <label class="fld">Example problems</label>
+    <select id="examples" class="sel">
+      <option value="">— pick a predefined problem —</option>
+      <optgroup label="Coding · LeetCode Hard">
+        <option value="lc_digitdp">Count Special Integers (digit DP)</option>
+        <option value="lc_median">Median of Two Sorted Arrays — O(log)</option>
+        <option value="lc_trap">Trapping Rain Water — two pointers</option>
+        <option value="lc_split">Split Array Largest Sum — binary search</option>
+      </optgroup>
+      <optgroup label="Competition Math">
+        <option value="math_pairs">Ordered pairs with a·b a perfect square</option>
+        <option value="math_rooks">Non-attacking rooks on an 8×8 board</option>
+      </optgroup>
+      <optgroup label="Number Theory">
+        <option value="nt_mod">Remainder of 7¹⁰⁰ ÷ 13</option>
+      </optgroup>
+      <optgroup label="Geometry">
+        <option value="geo_hex">Area of a regular hexagon</option>
+      </optgroup>
+      <optgroup label="Physics / STEM">
+        <option value="phys_proj">Projectile — maximum height</option>
+      </optgroup>
+      <optgroup label="Knowledge · uses retrieval">
+        <option value="know_peaks">Everest vs K2 — height difference</option>
+        <option value="know_pop">Combined population of France &amp; Germany</option>
+      </optgroup>
+    </select>
+
+    <label class="fld">Problem <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— editable</span></label>
     <textarea id="prompt" placeholder="Pose a verifiable math / coding / STEM problem…">LeetCode Hard — Count Special Integers (digit DP): a positive integer is "special" if all of its digits are distinct. Given a positive integer n, return how many integers in [1, n] are special.
 
 Write an optimal digit-DP Python solution with a clear explanation, then evaluate it for n = 2026 and put the final count in \boxed{}.</textarea>
+
+    <label class="chk"><input type="checkbox" id="augment" />
+      <span>Bring in relevant context <span class="chkhint">(Wikipedia) — recommended for knowledge tasks</span></span></label>
 
     <div class="row"><label class="fld" style="margin:18px 0 0">Temperature</label><span class="val" id="tVal">1.0</span></div>
     <input type="range" id="temp" min="0" max="1.2" step="0.1" value="1.0" />
@@ -265,6 +315,42 @@ $("#temp").addEventListener("input",e=>$("#tVal").textContent=(+e.target.value).
 $("#maxtok").addEventListener("input",e=>$("#mVal").textContent=e.target.value);
 $("#nsamp").addEventListener("input",e=>$("#nVal").textContent=e.target.value);
 $("#modeNote").textContent = NOTES.clr;
+
+// ---- predefined problems across fields ----
+const B = "Put the final answer in \\boxed{}.";
+const PROBLEMS = {
+  lc_digitdp:{mode:"clr",temp:1.0,maxtok:16384,n:4,augment:false,
+    prompt:`LeetCode Hard — Count Special Integers (digit DP): a positive integer is "special" if all of its digits are distinct. Given a positive integer n, return how many integers in [1, n] are special.\n\nWrite an optimal digit-DP Python solution with a clear explanation, then evaluate it for n = 2026 and ${B}`},
+  lc_median:{mode:"clr",temp:1.0,maxtok:12288,n:4,augment:false,
+    prompt:`LeetCode Hard 4 — Median of Two Sorted Arrays: given two sorted arrays nums1 and nums2 of sizes m and n, return the median of the two sorted arrays in overall O(log(m+n)) time. Give a clean Python solution with explanation and put the final time complexity in \\boxed{}.`},
+  lc_trap:{mode:"clr",temp:1.0,maxtok:10240,n:4,augment:false,
+    prompt:`LeetCode Hard 42 — Trapping Rain Water: given n non-negative integers representing an elevation map where each bar has width 1, compute how much water it can trap after raining. Give an optimal O(n) two-pointer Python solution with a short explanation, and put the final time complexity in \\boxed{}.`},
+  lc_split:{mode:"clr",temp:1.0,maxtok:12288,n:4,augment:false,
+    prompt:`LeetCode Hard 410 — Split Array Largest Sum: given an integer array nums and an integer k, split nums into k non-empty contiguous subarrays so the largest subarray sum is minimized; return that minimized value. Give an optimal binary-search-on-the-answer Python solution with explanation, and put the final time complexity in \\boxed{}.`},
+  math_pairs:{mode:"clr",temp:1.0,maxtok:10240,n:4,augment:false,
+    prompt:`Find the number of ordered pairs (a, b) of positive integers with a + b ≤ 100 such that a·b is a perfect square. Show your reasoning and ${B}`},
+  math_rooks:{mode:"single",temp:0.6,maxtok:4096,augment:false,
+    prompt:`In how many ways can 8 non-attacking rooks be placed on a standard 8×8 chessboard (each row and each column contains exactly one rook)? Show reasoning and ${B}`},
+  nt_mod:{mode:"clr",temp:1.0,maxtok:4096,n:3,augment:false,
+    prompt:`What is the remainder when 7^100 is divided by 13? Show brief reasoning and ${B}`},
+  geo_hex:{mode:"single",temp:0.6,maxtok:3072,augment:false,
+    prompt:`A regular hexagon has side length 6. What is its exact area? Show reasoning and ${B}`},
+  phys_proj:{mode:"single",temp:0.6,maxtok:3072,augment:false,
+    prompt:`A ball is thrown vertically upward with an initial speed of 20 m/s. Taking g = 9.8 m/s², what is the maximum height it reaches? Show the formula and put the final answer in meters (one decimal) in \\boxed{}.`},
+  know_peaks:{mode:"single",temp:0.6,maxtok:4096,augment:true,
+    prompt:`Using the official summit elevations of Mount Everest and K2, what is the difference in their heights? State the two elevations you use (in metres), then put the difference in metres in \\boxed{}.`},
+  know_pop:{mode:"single",temp:0.6,maxtok:4096,augment:true,
+    prompt:`Using the most recent population figures for France and Germany, what is their combined population? State each figure (in millions), then put the combined total in millions (rounded) in \\boxed{}.`},
+};
+$("#examples").addEventListener("change", e=>{
+  const p = PROBLEMS[e.target.value]; if(!p) return;
+  $("#prompt").value = p.prompt;
+  $(`#seg button[data-mode="${p.mode}"]`).click();
+  if(p.temp!=null){ $("#temp").value=p.temp; $("#tVal").textContent=(+p.temp).toFixed(1); }
+  if(p.maxtok!=null){ $("#maxtok").value=p.maxtok; $("#mVal").textContent=p.maxtok; }
+  if(p.n!=null){ $("#nsamp").value=p.n; $("#nVal").textContent=p.n; }
+  $("#augment").checked = !!p.augment;
+});
 
 // ---- status polling ----
 async function refreshStatus(){
@@ -326,15 +412,51 @@ function setRunning(on){
   else  { b.textContent="Run reasoning"; b.classList.remove("stopbtn"); }
 }
 
-$("#runBtn").addEventListener("click",()=>{
+$("#runBtn").addEventListener("click", async ()=>{
   if(running){ if(abort) abort.abort(); fetch("/api/stop",{method:"POST"}).catch(()=>{}); setRunning(false); return; }
-  const prompt=$("#prompt").value.trim();
-  if(!prompt){ $("#prompt").focus(); return; }
-  mode==="clr" ? runCLR(prompt) : runSingle(prompt);
+  const userPrompt=$("#prompt").value.trim();
+  if(!userPrompt){ $("#prompt").focus(); return; }
+  setRunning(true); clearStage();
+  let finalPrompt=userPrompt;
+  if($("#augment").checked){
+    const ctx = await fetchContext(userPrompt);
+    if(ctx) finalPrompt =
+      `You are given reference material that may help answer the question. Use it only if relevant; `+
+      `do your own reasoning and calculations.\n\n=== Reference ===\n${ctx}\n\n=== Question ===\n${userPrompt}`;
+  }
+  if(!running) return;  // user pressed Stop during retrieval
+  mode==="clr" ? runCLR(finalPrompt) : runSingle(finalPrompt);
 });
 
-const body = () => ({
-  prompt: $("#prompt").value.trim(),
+// Retrieve relevant context and render it as a card; returns the context string.
+async function fetchContext(q){
+  const card=document.createElement("div"); card.className="card";
+  card.innerHTML=`<div class="card-h">🔗 Retrieved context <span class="tag" id="ctxTag">searching…</span></div>
+    <div class="card-b" id="ctxBody"><span style="color:var(--faint)">Fetching relevant information…</span></div>`;
+  stage().appendChild(card);
+  try{
+    const r=await fetch("/api/context",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({prompt:q})});
+    const d=await r.json();
+    if(d.results && d.results.length){
+      $("#ctxTag").textContent=`${d.results.length} source${d.results.length>1?"s":""} · Wikipedia`;
+      $("#ctxBody").innerHTML=d.results.map(s=>
+        `<div class="src"><a href="${s.url}" target="_blank" rel="noopener">${esc(s.title)}</a>
+         <div class="srcx">${esc(s.extract.slice(0,420))}…</div></div>`).join("");
+      return d.context;
+    }
+    $("#ctxTag").textContent="no results";
+    $("#ctxBody").innerHTML=`<span style="color:var(--faint)">No external context found — running on the model's own knowledge.</span>`;
+    return "";
+  }catch(e){
+    $("#ctxTag").textContent="error";
+    $("#ctxBody").innerHTML=`<span class="err">${esc(""+e)}</span>`;
+    return "";
+  }
+}
+
+const body = (prompt) => ({
+  prompt: prompt ?? $("#prompt").value.trim(),
   temperature:+$("#temp").value, top_p:0.95,
   max_new_tokens:+$("#maxtok").value, n_samples:+$("#nsamp").value
 });
@@ -352,8 +474,7 @@ function splitThink(t){
 
 // ---- SINGLE PASS ----
 async function runSingle(prompt){
-  clearStage(); setRunning(true);
-  stage().innerHTML = `
+  stage().insertAdjacentHTML("beforeend", `
     <div class="answer" id="ansCard" style="display:none">
       <div class="ico">✓</div><div><div class="lab">Final answer</div><div class="v" id="ansV"></div></div>
     </div>
@@ -365,12 +486,12 @@ async function runSingle(prompt){
       <div class="card-h click" onclick="this.parentElement.classList.toggle('collapsed')">
         🧠 Thinking <span class="tag" id="tstat">streaming…</span><span class="chev">▾</span></div>
       <div class="card-b"><div class="trace" id="tr"><span class="blink"></span></div></div>
-    </div>`;
+    </div>`);
   const tr=$("#tr"), sol=$("#sol"); let txt="";
   abort=new AbortController();
   try{
     const resp=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(body()),signal:abort.signal});
+      body:JSON.stringify(body(prompt)),signal:abort.signal});
     for await (const ev of sse(resp)){
       if(ev.type==="token"){
         txt+=ev.text; const {think,sol:s}=splitThink(txt);
@@ -393,7 +514,6 @@ async function runSingle(prompt){
 
 // ---- CLR ----
 async function runCLR(prompt){
-  clearStage(); setRunning(true);
   const N=+$("#nsamp").value;
   let cards="";
   for(let i=0;i<N;i++) cards+=`
@@ -404,7 +524,7 @@ async function runCLR(prompt){
         <span class="chev" title="show / hide reasoning">▾</span></div>
       <div class="cand-t streaming" id="ct${i}"><span class="blink"></span></div>
     </div>`;
-  stage().innerHTML=`
+  stage().insertAdjacentHTML("beforeend", `
     <div class="card">
       <div class="card-h">⚡ Step 1 · Sampling ${N} independent solutions
         <span class="tag" id="phase" style="margin-left:auto">running…</span>
@@ -435,12 +555,12 @@ async function runCLR(prompt){
         </div>
         <div class="note">${NOTES.clr}</div>
       </div>
-    </div>`;
+    </div>`);
   const txts=Array(N).fill(""); const answers=Array(N).fill(null);
   abort=new AbortController();
   try{
     const resp=await fetch("/api/generate_clr",{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify(body()),signal:abort.signal});
+      body:JSON.stringify(body(prompt)),signal:abort.signal});
     for await (const ev of sse(resp)){
       if(ev.type==="sample_start"){ $("#phase").textContent=`sample ${ev.index+1}/${N}…`;
         $("#c"+ev.index)?.classList.remove("collapsed"); }
