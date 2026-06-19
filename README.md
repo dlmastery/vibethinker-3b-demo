@@ -6,7 +6,7 @@ A beautiful local web app for running **[VibeThinker-3B](https://github.com/Weib
 | Mode | What it does |
 |------|--------------|
 | **Single Pass** (non‑CLR) | One generation with the model's recommended sampling. Streams the `<think>` reasoning trace, then renders a clean Markdown **Solution** (with syntax‑highlighted code + KaTeX math) and auto‑extracts the final `\boxed{}` answer. |
-| **CLR** (Claim‑Level Reliability) | Samples **N** independent solutions → takes the **self‑consistency majority** (`cons@n`) → runs a focused **claim‑verification** pass that re‑derives the critical anchors → reports a **reliability score** and the selected answer. |
+| **CLR** (Claim‑Level Reliability) | Samples **N** independent solutions → takes the **self‑consistency majority** (`cons@n`) → runs a focused **claim‑verification** pass that re‑derives the critical anchors → reports a **reliability score** and the selected answer. Each candidate's reasoning trace is **collapsible (show/hide per solution)**, with a "hide all reasoning" toggle; the final card surfaces both the **self‑consistency** pick and the **verified** answer. |
 
 > Both modes use the **same weights** — CLR is an inference‑time strategy, not a different checkpoint.
 

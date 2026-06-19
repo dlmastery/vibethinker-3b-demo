@@ -121,14 +121,21 @@
   .cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
   .cand{background:var(--bg2);border:1px solid var(--line);border-radius:12px;overflow:hidden;
     display:flex;flex-direction:column}
-  .cand-h{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600}
+  .cand-h{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600;cursor:pointer;user-select:none}
+  .cand.collapsed .cand-h{border-bottom:0}
   .cand-h .n{width:22px;height:22px;border-radius:7px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--accent2)}
   .cand-h .ans{margin-left:auto;font-size:12px;color:var(--muted)}
   .cand-h .ans b{color:var(--good)}
-  .cand-t{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;line-height:1.55;
-    white-space:pre-wrap;word-break:break-word;color:#9aa0b3;padding:11px 13px;
-    height:150px;overflow-y:auto}
+  .cand-h .chev{color:var(--muted);font-size:10px;transition:.2s;width:12px;text-align:center}
+  .cand.collapsed .chev{transform:rotate(-90deg)}
+  .cand.collapsed .cand-t{display:none}
+  .cand-t{font-size:11px;line-height:1.55;color:#9aa0b3;padding:11px 13px;
+    max-height:340px;overflow-y:auto}
+  .cand-t .trace{font-family:'JetBrains Mono',ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
+  .cand-t .solution{font-size:12px;margin-top:10px;border-top:1px dashed var(--line);padding-top:10px}
+  .cand-t.streaming{font-family:'JetBrains Mono',ui-monospace,monospace;white-space:pre-wrap;word-break:break-word}
   .cand.win{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .cand.win .cand-h .n{background:var(--grad);color:#fff}
 
   /* vote bars */
   .vote{display:flex;align-items:center;gap:12px;margin:9px 0}
@@ -389,13 +396,18 @@ async function runCLR(prompt){
   let cards="";
   for(let i=0;i<N;i++) cards+=`
     <div class="cand" id="c${i}">
-      <div class="cand-h"><span class="n">${i+1}</span> Sample ${i+1}
-        <span class="ans" id="ca${i}">…</span></div>
-      <div class="cand-t" id="ct${i}"><span class="blink"></span></div>
+      <div class="cand-h" onclick="this.closest('.cand').classList.toggle('collapsed')">
+        <span class="n">${i+1}</span> Sample ${i+1}
+        <span class="ans" id="ca${i}">…</span>
+        <span class="chev" title="show / hide reasoning">▾</span></div>
+      <div class="cand-t streaming" id="ct${i}"><span class="blink"></span></div>
     </div>`;
   stage().innerHTML=`
     <div class="card">
-      <div class="card-h">⚡ Step 1 · Sampling ${N} independent solutions <span class="tag" id="phase">running…</span></div>
+      <div class="card-h">⚡ Step 1 · Sampling ${N} independent solutions
+        <span class="tag" id="phase" style="margin-left:auto">running…</span>
+        <span class="tag clickable" id="toggleAll" onclick="toggleAllCands()"
+          style="margin-left:12px;cursor:pointer;color:var(--accent2)">hide all reasoning</span></div>
       <div class="card-b"><div class="cands">${cards}</div></div>
     </div>
     <div class="card" id="voteCard" style="display:none">
@@ -411,8 +423,10 @@ async function runCLR(prompt){
       <div class="card-b">
         <div class="gauge">
           <div class="ring" id="ring"><div class="in" id="ringV">0%</div></div>
-          <div>
-            <div class="lab" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Selected answer</div>
+          <div style="flex:1">
+            <div class="lab" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Self-consistency · cons@${N}</div>
+            <div id="consV" style="font-size:16px;font-weight:600;margin:3px 0 12px;color:var(--txt)"></div>
+            <div class="lab" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Final answer (after claim verification)</div>
             <div class="v" id="finV" style="font-size:26px;font-weight:700;margin:4px 0 10px"></div>
             <span class="verdict" id="finVerdict"></span>
           </div>
@@ -420,23 +434,25 @@ async function runCLR(prompt){
         <div class="note">${NOTES.clr}</div>
       </div>
     </div>`;
-  const txts=Array(N).fill("");
+  const txts=Array(N).fill(""); const answers=Array(N).fill(null);
   abort=new AbortController();
   try{
     const resp=await fetch("/api/generate_clr",{method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify(body()),signal:abort.signal});
     for await (const ev of sse(resp)){
-      if(ev.type==="sample_start"){ $("#phase").textContent=`sample ${ev.index+1}/${N}…`; }
+      if(ev.type==="sample_start"){ $("#phase").textContent=`sample ${ev.index+1}/${N}…`;
+        $("#c"+ev.index)?.classList.remove("collapsed"); }
       else if(ev.type==="sample_token"){ const i=ev.index; txts[i]+=ev.text;
-        const el=$("#ct"+i); el.innerHTML=esc(txts[i])+'<span class="blink"></span>'; el.scrollTop=el.scrollHeight; }
-      else if(ev.type==="sample_done"){ const i=ev.index;
-        $("#ct"+i).innerHTML=esc(txts[i]);
-        $("#ca"+i).innerHTML = ev.answer!=null ? `→ <b>${answerHTML(ev.answer)}</b>` : "→ —"; }
-      else if(ev.type==="votes"){ renderVotes(ev.votes, ev.leader, N); }
+        const {think,sol}=splitThink(txts[i]);
+        const el=$("#ct"+i); el.innerHTML=esc(sol?think+"\n…":think)+'<span class="blink"></span>'; el.scrollTop=el.scrollHeight; }
+      else if(ev.type==="sample_done"){ const i=ev.index; answers[i]=ev.answer;
+        renderCandidate(i, txts[i]);
+        $("#ca"+i).innerHTML = ev.answer!=null ? `→ <b>${answerHTML(ev.answer)}</b>` : "→ —";
+        $("#c"+i).classList.add("collapsed"); }   // collapse once done; user can re-open
+      else if(ev.type==="votes"){ renderVotes(ev.votes, ev.leader, N);
+        for(let i=0;i<N;i++) $("#c"+i)?.classList.toggle("win", answers[i]!=null && answers[i]===ev.leader); }
       else if(ev.type==="phase" && ev.phase==="verifying"){
-        $("#verCard").style.display="block"; $("#verTag").innerHTML="checking "+answerHTML(ev.candidate);
-        // highlight winning candidate cards
-        for(let i=0;i<N;i++){} }
+        $("#verCard").style.display="block"; $("#verTag").innerHTML="checking "+answerHTML(ev.candidate); }
       else if(ev.type==="verify_token"){ const t=$("#verTr");
         t.dataset.x=(t.dataset.x||"")+ev.text;
         const {think,sol}=splitThink(t.dataset.x);
@@ -450,6 +466,24 @@ async function runCLR(prompt){
     }
   }catch(e){ if(e.name!=="AbortError") stage().insertAdjacentHTML("beforeend",`<div class="card"><div class="card-b"><span class="err">${esc(""+e)}</span></div></div>`); }
   setRunning(false);
+}
+
+// render a finished candidate: reasoning trace (mono) + rendered solution
+function renderCandidate(i, full){
+  const {think, sol} = splitThink(full);
+  const el = $("#ct"+i); el.classList.remove("streaming"); el.innerHTML="";
+  const tr = document.createElement("div"); tr.className="trace";
+  tr.textContent = (think||full).trim() || "(no reasoning captured)";
+  el.appendChild(tr);
+  if(sol){ const s=document.createElement("div"); s.className="solution"; renderSolution(s, sol); el.appendChild(s); }
+}
+
+// expand / collapse every candidate's reasoning at once
+function toggleAllCands(){
+  const cands=[...document.querySelectorAll(".cand")];
+  const anyOpen=cands.some(c=>!c.classList.contains("collapsed"));
+  cands.forEach(c=>c.classList.toggle("collapsed", anyOpen));
+  const t=$("#toggleAll"); if(t) t.textContent = anyOpen ? "show all reasoning" : "hide all reasoning";
 }
 
 function renderVotes(votes, leader, N){
@@ -467,13 +501,23 @@ function showFinal(ev,N){
   $("#finCard").style.display="block";
   const pct=Math.round((ev.reliability||0)*100);
   const ring=$("#ring"); ring.style.setProperty("--p",pct); $("#ringV").textContent=pct+"%";
+  // self-consistency (cons@N): the majority answer + its vote share
+  const votes=ev.votes||{};
+  const ent=Object.entries(votes).sort((a,b)=>b[1]-a[1]);
+  const consEl=$("#consV");
+  if(consEl){
+    if(ent.length){ const [k,c]=ent[0];
+      consEl.innerHTML = `${answerHTML(k)} <span style="color:var(--muted);font-weight:500">· ${c}/${N} samples agree</span>`;
+    } else consEl.innerHTML = `<span style="color:var(--faint)">no extractable answers</span>`;
+  }
   $("#finV").innerHTML=answerHTML(ev.answer);
+  const consLeader=ent.length?ent[0][0]:null;
   const v=$("#finVerdict");
   if(ev.verdict){ v.className="verdict "+ev.verdict;
-    v.innerHTML=({CORRECT:"✓ verifier agrees",INCORRECT:"✗ verifier disagrees",UNCERTAIN:"~ verifier uncertain"})[ev.verdict]||ev.verdict; }
-  else v.style.display="none";
-  // mark winning candidate cards
-  for(let i=0;i<N;i++){ const a=$("#ca"+i)?.textContent||""; }
+    const changed = consLeader!=null && ev.answer!=null && String(ev.answer)!==String(consLeader);
+    const base=({CORRECT:"✓ verifier agrees",INCORRECT:"✗ verifier disagrees",UNCERTAIN:"~ verifier uncertain"})[ev.verdict]||ev.verdict;
+    v.innerHTML = changed ? base+" · verification overrode the vote" : base;
+  } else v.style.display="none";
 }
 </script>
 </body>
