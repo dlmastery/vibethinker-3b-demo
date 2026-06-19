@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VibeThinker Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" />
+<script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0c10; --bg2:#101218; --panel:#15171f; --panel2:#1b1e29;
+    --line:#262a36; --line2:#323748;
+    --txt:#e7e9f0; --muted:#8c92a6; --faint:#5a6076;
+    --accent:#7c5cff; --accent2:#26d0ce; --good:#2fd27a; --warn:#ffb454; --bad:#ff5c7a;
+    --grad:linear-gradient(120deg,#7c5cff 0%,#26d0ce 100%);
+    --radius:16px; --shadow:0 10px 40px -12px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:Inter,system-ui,sans-serif;color:var(--txt);
+    background:
+      radial-gradient(900px 600px at 12% -10%, rgba(124,92,255,.18), transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, rgba(38,208,206,.12), transparent 55%),
+      var(--bg);
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace}
+
+  /* ---- header ---- */
+  header{
+    display:flex;align-items:center;gap:16px;padding:16px 28px;
+    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;
+    background:rgba(11,12,16,.7);backdrop-filter:blur(14px);
+  }
+  .logo{width:38px;height:38px;border-radius:11px;background:var(--grad);
+    display:grid;place-items:center;font-weight:800;font-size:20px;color:#fff;
+    box-shadow:0 6px 18px -4px rgba(124,92,255,.7)}
+  .brand h1{font-size:17px;margin:0;letter-spacing:.2px;font-weight:700}
+  .brand p{margin:0;font-size:12px;color:var(--muted)}
+  .spacer{flex:1}
+  .badge{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);
+    background:var(--panel);border:1px solid var(--line);padding:7px 12px;border-radius:999px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+  .dot.on{background:var(--good);box-shadow:0 0 10px var(--good)}
+  .dot.load{background:var(--warn);box-shadow:0 0 10px var(--warn);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* ---- layout ---- */
+  main{display:grid;grid-template-columns:380px 1fr;gap:0;height:calc(100vh - 71px)}
+  .panel{background:var(--panel);border-right:1px solid var(--line);
+    padding:22px;overflow-y:auto}
+  .stage{padding:26px 30px;overflow-y:auto}
+
+  label.fld{display:block;font-size:12px;font-weight:600;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px}
+  textarea{
+    width:100%;min-height:150px;resize:vertical;background:var(--bg2);
+    border:1px solid var(--line2);border-radius:12px;color:var(--txt);
+    padding:14px;font-size:14px;line-height:1.55;font-family:inherit}
+  textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.18)}
+
+  /* segmented mode toggle */
+  .seg{display:flex;background:var(--bg2);border:1px solid var(--line2);
+    border-radius:12px;padding:4px;gap:4px}
+  .seg button{flex:1;border:0;background:transparent;color:var(--muted);
+    padding:11px 8px;border-radius:9px;cursor:pointer;font-weight:600;font-size:13px;
+    transition:.18s;font-family:inherit}
+  .seg button .sub{display:block;font-size:10px;font-weight:500;opacity:.8;margin-top:2px}
+  .seg button.active{background:var(--grad);color:#fff;box-shadow:0 6px 16px -6px rgba(124,92,255,.7)}
+
+  .row{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+  .row .val{font-size:13px;color:var(--accent2);font-weight:600}
+  input[type=range]{width:100%;-webkit-appearance:none;height:5px;border-radius:5px;
+    background:var(--line2);margin-top:8px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;
+    border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 0 4px rgba(124,92,255,.2)}
+  .hint{font-size:11px;color:var(--faint);margin-top:6px;line-height:1.5}
+
+  .run{margin-top:22px;width:100%;border:0;border-radius:12px;padding:15px;
+    font-size:15px;font-weight:700;color:#fff;cursor:pointer;background:var(--grad);
+    box-shadow:0 10px 26px -8px rgba(124,92,255,.7);transition:.15s;font-family:inherit}
+  .run:hover{transform:translateY(-1px)}
+  .run:disabled{opacity:.5;cursor:not-allowed;transform:none}
+  .stopbtn{background:#2a1d28;color:var(--bad);border:1px solid #43232f;box-shadow:none}
+
+  .clr-only{display:none}
+  body.clr .clr-only{display:block}
+
+  /* ---- stage cards ---- */
+  .empty{height:100%;display:grid;place-content:center;text-align:center;color:var(--faint)}
+  .empty .big{font-size:54px;margin-bottom:10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    margin-bottom:20px;box-shadow:var(--shadow);overflow:hidden}
+  .card-h{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);
+    font-weight:600;font-size:13px;letter-spacing:.3px}
+  .card-h .tag{margin-left:auto;font-size:11px;color:var(--muted);font-weight:500}
+  .card-b{padding:18px}
+  .trace{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;
+    line-height:1.65;white-space:pre-wrap;word-break:break-word;color:#c5cad8;
+    max-height:420px;overflow-y:auto}
+  .trace::-webkit-scrollbar,.panel::-webkit-scrollbar,.stage::-webkit-scrollbar{width:9px}
+  .trace::-webkit-scrollbar-thumb{background:var(--line2);border-radius:9px}
+
+  .answer{display:flex;align-items:center;gap:14px;padding:20px 22px;
+    background:linear-gradient(120deg,rgba(124,92,255,.12),rgba(38,208,206,.08));
+    border:1px solid var(--line2);border-radius:var(--radius);margin-bottom:20px}
+  .answer .lab{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted)}
+  .answer .v{font-size:26px;font-weight:700;margin-top:2px}
+  .answer .ico{width:46px;height:46px;border-radius:12px;background:var(--grad);
+    display:grid;place-items:center;font-size:24px;flex-shrink:0}
+
+  /* CLR candidate grid */
+  .cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+  .cand{background:var(--bg2);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    display:flex;flex-direction:column}
+  .cand-h{display:flex;align-items:center;gap:8px;padding:10px 13px;border-bottom:1px solid var(--line);font-size:12px;font-weight:600}
+  .cand-h .n{width:22px;height:22px;border-radius:7px;background:var(--panel2);display:grid;place-items:center;font-size:11px;color:var(--accent2)}
+  .cand-h .ans{margin-left:auto;font-size:12px;color:var(--muted)}
+  .cand-h .ans b{color:var(--good)}
+  .cand-t{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;line-height:1.55;
+    white-space:pre-wrap;word-break:break-word;color:#9aa0b3;padding:11px 13px;
+    height:150px;overflow-y:auto}
+  .cand.win{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+
+  /* vote bars */
+  .vote{display:flex;align-items:center;gap:12px;margin:9px 0}
+  .vote .k{font-family:'JetBrains Mono',monospace;font-size:13px;min-width:70px;color:var(--txt)}
+  .vote .bar{flex:1;height:10px;background:var(--bg2);border-radius:6px;overflow:hidden}
+  .vote .bar i{display:block;height:100%;background:var(--grad);border-radius:6px;transition:width .5s}
+  .vote .c{font-size:12px;color:var(--muted);min-width:42px;text-align:right}
+  .vote.lead .k{color:var(--accent2)}
+
+  /* reliability gauge */
+  .gauge{display:flex;align-items:center;gap:22px}
+  .ring{--p:0;width:96px;height:96px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(var(--accent2) calc(var(--p)*1%), var(--line) 0);
+    display:grid;place-items:center;transition:--p .6s}
+  .ring .in{width:74px;height:74px;border-radius:50%;background:var(--panel);
+    display:grid;place-items:center;font-size:22px;font-weight:700}
+  .verdict{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;
+    font-size:12px;font-weight:600;border:1px solid var(--line2)}
+  .verdict.CORRECT{color:var(--good);border-color:rgba(47,210,122,.4);background:rgba(47,210,122,.1)}
+  .verdict.INCORRECT{color:var(--bad);border-color:rgba(255,92,122,.4);background:rgba(255,92,122,.1)}
+  .verdict.UNCERTAIN{color:var(--warn);border-color:rgba(255,180,84,.4);background:rgba(255,180,84,.1)}
+
+  .note{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:14px;
+    border-left:2px solid var(--line2);padding-left:12px}
+  .err{color:var(--bad);font-family:monospace;font-size:12px;white-space:pre-wrap}
+  .card-h.click{cursor:pointer;user-select:none}
+  .card-h .chev{margin-left:auto;transition:.2s;color:var(--muted);font-size:11px}
+  .card.collapsed .card-b{display:none}
+  .card.collapsed .chev{transform:rotate(-90deg)}
+  .solution{font-size:14.5px;line-height:1.7;color:#dfe3ee}
+  .solution.raw{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:12.5px;
+    white-space:pre-wrap;word-break:break-word;color:#c5cad8}
+  .solution .katex-display{margin:.6em 0}
+  .solution h1,.solution h2,.solution h3{font-size:15px;font-weight:700;margin:1.1em 0 .5em;color:#fff}
+  .solution p{margin:.6em 0}
+  .solution ul,.solution ol{margin:.6em 0;padding-left:1.4em}
+  .solution li{margin:.25em 0}
+  .solution code{font-family:'JetBrains Mono',monospace;font-size:.86em;
+    background:#0e1016;border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:#e3b3ff}
+  .solution pre{background:#0c0e14;border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;overflow-x:auto;margin:.8em 0}
+  .solution pre code{background:none;border:0;padding:0;font-size:12.5px;line-height:1.6;color:#d7dcea}
+  .solution table{border-collapse:collapse;margin:.7em 0;font-size:13px}
+  .solution th,.solution td{border:1px solid var(--line2);padding:6px 10px}
+  .solution blockquote{border-left:3px solid var(--line2);margin:.6em 0;padding:.1em 0 .1em 12px;color:var(--muted)}
+  .solution a{color:var(--accent2)}
+  .blink{display:inline-block;width:7px;height:14px;background:var(--accent2);
+    margin-left:1px;vertical-align:-2px;animation:bl 1s steps(2) infinite}
+  @keyframes bl{0%{opacity:1}50%{opacity:0}}
+</style>
+</head>
+<body class="single">
+<header>
+  <div class="logo">V</div>
+  <div class="brand">
+    <h1>VibeThinker Studio</h1>
+    <p>Verifiable reasoning · single-pass &amp; Claim-Level Reliability</p>
+  </div>
+  <div class="spacer"></div>
+  <div class="badge"><span id="devDot" class="dot"></span><span id="devName">checking…</span></div>
+  <div class="badge"><span id="mdlDot" class="dot"></span><span id="mdlName">VibeThinker-3B</span></div>
+</header>
+
+<main>
+  <!-- control panel -->
+  <section class="panel">
+    <label class="fld">Reasoning mode</label>
+    <div class="seg" id="seg">
+      <button data-mode="single" class="active">Single Pass<span class="sub">non-CLR · one solution</span></button>
+      <button data-mode="clr">CLR<span class="sub">claim-level reliability</span></button>
+    </div>
+
+    <label class="fld">Problem</label>
+    <textarea id="prompt" placeholder="e.g. Find the number of ordered pairs (a,b) of positive integers with a+b ≤ 100 such that a·b is a perfect square."></textarea>
+
+    <div class="row"><label class="fld" style="margin:18px 0 0">Temperature</label><span class="val" id="tVal">0.6</span></div>
+    <input type="range" id="temp" min="0" max="1.2" step="0.1" value="0.6" />
+    <div class="hint">README recommends 0.6 or 1.0. CLR bumps sampling to ≥1.0 for diversity.</div>
+
+    <div class="row"><label class="fld" style="margin:18px 0 0">Max new tokens</label><span class="val" id="mVal">8192</span></div>
+    <input type="range" id="maxtok" min="1024" max="40960" step="1024" value="8192" />
+    <div class="hint">Reasoning traces are long. Lower = faster on a laptop GPU.</div>
+
+    <div class="clr-only">
+      <div class="row"><label class="fld" style="margin:18px 0 0">CLR samples (N)</label><span class="val" id="nVal">4</span></div>
+      <input type="range" id="nsamp" min="2" max="8" step="1" value="4" />
+      <div class="hint">N independent solutions → majority vote → claim verification.</div>
+    </div>
+
+    <button class="run" id="runBtn">Run reasoning</button>
+
+    <div class="note" id="modeNote"></div>
+  </section>
+
+  <!-- output stage -->
+  <section class="stage" id="stage">
+    <div class="empty" id="empty">
+      <div>
+        <div class="big">∑</div>
+        <div style="font-size:15px;color:var(--muted)">Pose a verifiable problem and run the model.</div>
+        <div style="margin-top:6px">VibeThinker-3B · math · coding · STEM</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let mode = "single", running = false, abort = null;
+
+const NOTES = {
+  single: "Single Pass: one generation with the model's recommended sampling. The final \\boxed{} answer is extracted automatically.",
+  clr: "CLR (reconstruction): samples N solutions, takes the self-consistency majority (the repo's cons@n), then runs a focused claim-verification pass that re-derives the critical anchors. Reports a reliability score. The official CLR algorithm isn't published, so this is a faithful community reconstruction of the method described in the VibeThinker-3B report."
+};
+
+// ---- controls ----
+$("#seg").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  mode = b.dataset.mode;
+  [...$("#seg").children].forEach(x=>x.classList.toggle("active", x===b));
+  document.body.classList.toggle("clr", mode==="clr");
+  $("#modeNote").textContent = NOTES[mode];
+});
+$("#temp").addEventListener("input",e=>$("#tVal").textContent=(+e.target.value).toFixed(1));
+$("#maxtok").addEventListener("input",e=>$("#mVal").textContent=e.target.value);
+$("#nsamp").addEventListener("input",e=>$("#nVal").textContent=e.target.value);
+$("#modeNote").textContent = NOTES.single;
+
+// ---- status polling ----
+async function refreshStatus(){
+  try{
+    const s = await (await fetch("/api/status")).json();
+    $("#devName").textContent = s.device;
+    $("#devDot").className = "dot " + (s.device.toLowerCase().includes("cpu")?"":"on");
+    if(s.ready){ $("#mdlDot").className="dot on"; $("#mdlName").textContent="VibeThinker-3B · loaded"; }
+    else if(!s.model_present){ $("#mdlDot").className="dot"; $("#mdlName").textContent="VibeThinker-3B · downloading…"; }
+    else { $("#mdlDot").className="dot"; $("#mdlName").textContent="VibeThinker-3B · not loaded"; }
+  }catch(e){}
+}
+refreshStatus(); setInterval(refreshStatus, 4000);
+
+// ---- katex ----
+function renderMath(el){
+  if(window.renderMathInElement) try{ renderMathInElement(el,{delimiters:[
+    {left:"$$",right:"$$",display:true},{left:"\\[",right:"\\]",display:true},
+    {left:"\\(",right:"\\)",display:false},{left:"$",right:"$",display:false}
+  ],throwOnError:false}); }catch(e){}
+}
+// render a markdown solution with code highlighting + math
+function renderSolution(el, text){
+  if(window.marked){
+    el.classList.remove("raw");
+    el.innerHTML = marked.parse(text, {breaks:true, gfm:true});
+    if(window.hljs) el.querySelectorAll("pre code").forEach(b=>{ try{hljs.highlightElement(b);}catch(e){} });
+    renderMath(el);
+  } else { el.classList.add("raw"); el.textContent = text; }
+}
+function answerHTML(a){
+  if(a==null) return "<span style='color:var(--faint)'>no boxed answer found</span>";
+  const span=document.createElement("span");
+  try{ katex.render(a,span,{throwOnError:false}); }catch(e){ span.textContent=a; }
+  return span.outerHTML;
+}
+
+// ---- SSE reader ----
+async function* sse(resp){
+  const reader = resp.body.getReader(), dec = new TextDecoder();
+  let buf="";
+  while(true){
+    const {value,done}=await reader.read(); if(done) break;
+    buf += dec.decode(value,{stream:true});
+    let idx;
+    while((idx=buf.indexOf("\n\n"))>=0){
+      const raw=buf.slice(0,idx); buf=buf.slice(idx+2);
+      const line=raw.split("\n").find(l=>l.startsWith("data: "));
+      if(line) yield JSON.parse(line.slice(6));
+    }
+  }
+}
+
+function setRunning(on){
+  running=on;
+  const b=$("#runBtn");
+  b.disabled=false;
+  if(on){ b.textContent="Stop"; b.classList.add("stopbtn"); }
+  else  { b.textContent="Run reasoning"; b.classList.remove("stopbtn"); }
+}
+
+$("#runBtn").addEventListener("click",()=>{
+  if(running){ if(abort) abort.abort(); fetch("/api/stop",{method:"POST"}).catch(()=>{}); setRunning(false); return; }
+  const prompt=$("#prompt").value.trim();
+  if(!prompt){ $("#prompt").focus(); return; }
+  mode==="clr" ? runCLR(prompt) : runSingle(prompt);
+});
+
+const body = () => ({
+  prompt: $("#prompt").value.trim(),
+  temperature:+$("#temp").value, top_p:0.95,
+  max_new_tokens:+$("#maxtok").value, n_samples:+$("#nsamp").value
+});
+const stage = ()=>$("#stage");
+function clearStage(){ $("#empty")?.remove(); stage().innerHTML=""; }
+const esc = s => s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+// split <think>…</think> reasoning from the final solution
+function splitThink(t){
+  t = t.replace(/^\s*<think>/,"");
+  const i = t.indexOf("</think>");
+  if(i<0) return {think:t, sol:""};
+  return {think:t.slice(0,i), sol:t.slice(i+8).replace(/^\s+/,"")};
+}
+
+// ---- SINGLE PASS ----
+async function runSingle(prompt){
+  clearStage(); setRunning(true);
+  stage().innerHTML = `
+    <div class="answer" id="ansCard" style="display:none">
+      <div class="ico">✓</div><div><div class="lab">Final answer</div><div class="v" id="ansV"></div></div>
+    </div>
+    <div class="card" id="solCard" style="display:none">
+      <div class="card-h">✦ Solution <span class="tag" id="tok"></span></div>
+      <div class="card-b"><div class="solution" id="sol"></div></div>
+    </div>
+    <div class="card" id="thinkCard">
+      <div class="card-h click" onclick="this.parentElement.classList.toggle('collapsed')">
+        🧠 Thinking <span class="tag" id="tstat">streaming…</span><span class="chev">▾</span></div>
+      <div class="card-b"><div class="trace" id="tr"><span class="blink"></span></div></div>
+    </div>`;
+  const tr=$("#tr"), sol=$("#sol"); let txt="";
+  abort=new AbortController();
+  try{
+    const resp=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body()),signal:abort.signal});
+    for await (const ev of sse(resp)){
+      if(ev.type==="token"){
+        txt+=ev.text; const {think,sol:s}=splitThink(txt);
+        tr.innerHTML=esc(think)+'<span class="blink"></span>'; tr.scrollTop=tr.scrollHeight;
+        if(s){ $("#solCard").style.display="block"; sol.classList.add("raw"); sol.textContent=s; }
+      }
+      else if(ev.type==="done"){
+        const {think,sol:s}=splitThink(txt);
+        tr.innerHTML=esc(think);
+        $("#tstat").textContent="reasoning";
+        if(s){ $("#solCard").style.display="block"; renderSolution(sol, s);
+               $("#thinkCard").classList.add("collapsed"); }
+        $("#tok").textContent=ev.tokens+" tokens";
+        if(ev.answer!=null){ $("#ansCard").style.display="flex"; $("#ansV").innerHTML=answerHTML(ev.answer); }
+      } else if(ev.type==="error"){ tr.innerHTML=`<span class="err">${esc(ev.message)}</span>`; }
+    }
+  }catch(e){ if(e.name!=="AbortError") tr.innerHTML=`<span class="err">${esc(""+e)}</span>`; }
+  setRunning(false);
+}
+
+// ---- CLR ----
+async function runCLR(prompt){
+  clearStage(); setRunning(true);
+  const N=+$("#nsamp").value;
+  let cards="";
+  for(let i=0;i<N;i++) cards+=`
+    <div class="cand" id="c${i}">
+      <div class="cand-h"><span class="n">${i+1}</span> Sample ${i+1}
+        <span class="ans" id="ca${i}">…</span></div>
+      <div class="cand-t" id="ct${i}"><span class="blink"></span></div>
+    </div>`;
+  stage().innerHTML=`
+    <div class="card">
+      <div class="card-h">⚡ Step 1 · Sampling ${N} independent solutions <span class="tag" id="phase">running…</span></div>
+      <div class="card-b"><div class="cands">${cards}</div></div>
+    </div>
+    <div class="card" id="voteCard" style="display:none">
+      <div class="card-h">🗳 Step 2 · Self-consistency vote <span class="tag">cons@${N}</span></div>
+      <div class="card-b" id="votes"></div>
+    </div>
+    <div class="card" id="verCard" style="display:none">
+      <div class="card-h">🔎 Step 3 · Claim-level verification <span class="tag" id="verTag"></span></div>
+      <div class="card-b"><div class="trace" id="verTr" style="max-height:260px"><span class="blink"></span></div></div>
+    </div>
+    <div class="card" id="finCard" style="display:none">
+      <div class="card-h">★ Final · Reliability</div>
+      <div class="card-b">
+        <div class="gauge">
+          <div class="ring" id="ring"><div class="in" id="ringV">0%</div></div>
+          <div>
+            <div class="lab" style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">Selected answer</div>
+            <div class="v" id="finV" style="font-size:26px;font-weight:700;margin:4px 0 10px"></div>
+            <span class="verdict" id="finVerdict"></span>
+          </div>
+        </div>
+        <div class="note">${NOTES.clr}</div>
+      </div>
+    </div>`;
+  const txts=Array(N).fill("");
+  abort=new AbortController();
+  try{
+    const resp=await fetch("/api/generate_clr",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body()),signal:abort.signal});
+    for await (const ev of sse(resp)){
+      if(ev.type==="sample_start"){ $("#phase").textContent=`sample ${ev.index+1}/${N}…`; }
+      else if(ev.type==="sample_token"){ const i=ev.index; txts[i]+=ev.text;
+        const el=$("#ct"+i); el.innerHTML=esc(txts[i])+'<span class="blink"></span>'; el.scrollTop=el.scrollHeight; }
+      else if(ev.type==="sample_done"){ const i=ev.index;
+        $("#ct"+i).innerHTML=esc(txts[i]);
+        $("#ca"+i).innerHTML = ev.answer!=null ? `→ <b>${answerHTML(ev.answer)}</b>` : "→ —"; }
+      else if(ev.type==="votes"){ renderVotes(ev.votes, ev.leader, N); }
+      else if(ev.type==="phase" && ev.phase==="verifying"){
+        $("#verCard").style.display="block"; $("#verTag").innerHTML="checking "+answerHTML(ev.candidate);
+        // highlight winning candidate cards
+        for(let i=0;i<N;i++){} }
+      else if(ev.type==="verify_token"){ const t=$("#verTr");
+        t.dataset.x=(t.dataset.x||"")+ev.text;
+        const {think,sol}=splitThink(t.dataset.x);
+        t.innerHTML=esc(sol||think)+'<span class="blink"></span>'; t.scrollTop=t.scrollHeight; }
+      else if(ev.type==="verify_done"){ const t=$("#verTr");
+        const {think,sol}=splitThink(t.dataset.x||"");
+        if(sol){ t.classList.remove("trace"); t.classList.add("solution"); renderSolution(t, sol); }
+        else { t.innerHTML=esc(think); renderMath(t); } }
+      else if(ev.type==="final"){ showFinal(ev,N); $("#phase").textContent="done"; }
+      else if(ev.type==="error"){ stage().insertAdjacentHTML("beforeend",`<div class="card"><div class="card-b"><span class="err">${esc(ev.message)}</span></div></div>`); }
+    }
+  }catch(e){ if(e.name!=="AbortError") stage().insertAdjacentHTML("beforeend",`<div class="card"><div class="card-b"><span class="err">${esc(""+e)}</span></div></div>`); }
+  setRunning(false);
+}
+
+function renderVotes(votes, leader, N){
+  $("#voteCard").style.display="block";
+  const ent=Object.entries(votes).sort((a,b)=>b[1]-a[1]);
+  $("#votes").innerHTML = ent.length? ent.map(([k,v])=>`
+    <div class="vote ${k===leader?'lead':''}">
+      <span class="k">${answerHTML(k)}</span>
+      <span class="bar"><i style="width:${Math.round(v/N*100)}%"></i></span>
+      <span class="c">${v}/${N}</span>
+    </div>`).join("") : `<span style='color:var(--faint)'>no extractable answers</span>`;
+}
+
+function showFinal(ev,N){
+  $("#finCard").style.display="block";
+  const pct=Math.round((ev.reliability||0)*100);
+  const ring=$("#ring"); ring.style.setProperty("--p",pct); $("#ringV").textContent=pct+"%";
+  $("#finV").innerHTML=answerHTML(ev.answer);
+  const v=$("#finVerdict");
+  if(ev.verdict){ v.className="verdict "+ev.verdict;
+    v.innerHTML=({CORRECT:"✓ verifier agrees",INCORRECT:"✗ verifier disagrees",UNCERTAIN:"~ verifier uncertain"})[ev.verdict]||ev.verdict; }
+  else v.style.display="none";
+  // mark winning candidate cards
+  for(let i=0;i<N;i++){ const a=$("#ca"+i)?.textContent||""; }
+}
+</script>
+</body>
+</html>

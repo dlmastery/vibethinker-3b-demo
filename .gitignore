@@ -1,0 +1,30 @@
+# Model weights (download separately — see README)
+models/
+
+# Cloned upstream reference repo
+repo/
+
+# Local TLS CA bundle (may contain machine/corporate certificates — never commit)
+win-ca-bundle.pem
+
+# Playwright scratch
+.playwright-mcp/
+
+# Logs / scratch
+*.log
+req.json
+sse_tmp.txt
+solution_tmp.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
